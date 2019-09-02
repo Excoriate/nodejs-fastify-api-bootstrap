@@ -1,0 +1,11 @@
+{
+  "information": {
+    "Company": "IdeaUP SPA.",
+    "version": "v.1.0.0",
+    "author": "Alex Torres - IdeaUP CTO"
+  },
+  "configuration": {
+    "default_port": "3000",
+    "default_host": "0.0.0.0"
+  }
+}

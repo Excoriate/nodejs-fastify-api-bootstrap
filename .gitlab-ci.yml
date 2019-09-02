@@ -1,0 +1,89 @@
+variables:
+  YAMLLINT_INPUT: ".gitlab-ci.yml"
+  CI_PROJECT_NAME: "acermet-chatbot-jarvis"
+  HELM_PATH: "deployment/charts/${CI_PROJECT_NAME}"
+  PROJECT_ID: ${GCP_PROJECT_ID}
+
+stages:
+  - lint
+  - build
+  - test
+  - audit
+  - deploy
+  - deploy-dev
+  - deploy-prod
+
+node:
+  stage: lint
+  image: mhart/alpine-node:10
+  cache:
+    paths:
+      - node_modules
+  before_script:
+    - npm install --no-audit
+  script:
+    - lint:check
+    - lint:fix
+
+npm:
+  stage: audit
+  cache:
+    paths:
+      - node_modules
+  image: mhart/alpine-node:10
+  script:
+    - npm audit fix
+
+td:
+  stage: test
+  image: mhart/alpine-node:10
+  variables:
+    NODE_ENV: development
+  before_script:
+    - npm install --no-audit
+  script:
+    - npm run test:tdd
+    - npm run test:coverage
+  coverage: /^All files[^|]*\|[^|]*\s+([\d\.]+)/
+
+################################
+# environment: dev
+################################
+deploy_dev:
+  extends: .helm_deploy
+  stage: deploy-dev
+  environment:
+    name: dev
+  variables:
+    K8_CLUSTER_NAME: ${K8_CLUSTER_NAME}
+    K8_CLUSTER_REGION: ${K8_CLUSTER_REGION}
+    K8_NAMESPACE: ${K8_NAMESPACE}
+    HELM_RELEASE_NAME: ${CI_PROJECT_NAME}
+    HELM_OPTS: --set-string image.pullSecret.registry=${CI_REGISTRY}
+      --set-string image.pullSecret.username=${DEPLOY_TOKEN}
+      --set-string image.pullSecret.password=${DEPLOY_PASSWORD}
+      --values deployment/charts/config/values-${CI_ENVIRONMENT_NAME}.yaml
+  only:
+    - master
+    - tags
+
+################################
+# environment: production
+################################
+deploy_production:
+  extends: .helm_deploy
+  stage: deploy-prod
+  environment:
+    name: production
+  variables:
+    K8_CLUSTER_NAME: ${K8_CLUSTER_NAME}
+    K8_CLUSTER_REGION: ${K8_CLUSTER_REGION}
+    K8_NAMESPACE: ${K8_NAMESPACE}
+    HELM_RELEASE_NAME: ${CI_PROJECT_NAME}
+    HELM_OPTS: --set-string image.pullSecret.registry=${CI_REGISTRY}
+      --set-string image.pullSecret.username=${DEPLOY_TOKEN}
+      --set-string image.pullSecret.password=${DEPLOY_PASSWORD}
+      --values deployment/charts/config/values-${CI_ENVIRONMENT_NAME}.yaml
+  only:
+    - tags
+  when: manual
