@@ -1,3 +1,2 @@
-# AcerBot Sales Micro Service
+# NodeJs Fastify Bootstrapp (template).
 
-Micro Service, written in NodeJs in charge of response and answer every custom question sent by the user directly from www.acermet.cl website.
